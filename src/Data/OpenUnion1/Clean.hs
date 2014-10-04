@@ -10,8 +10,11 @@
   , ScopedTypeVariables
   , LambdaCase
   , ConstraintKinds
+  , FlexibleContexts
+  , FunctionalDependencies
+  , UndecidableInstances
   , OverlappingInstances #-}
-module Data.OpenUnion1.Clean (Union, Nil, List(..), (|>)(..), (@>), exhaust, (∈)(), Member, liftU, (⊆)(..), Include) where
+module Data.OpenUnion1.Clean (Union(..), Nil, List(..), (|>)(..), (||>), exhaust, simply, (∈)(), Member, liftU, (⊆)(..), Include) where
 import Data.Proxy
 
 -- | Poly-kinded list
@@ -33,23 +36,33 @@ data family Union (s :: List (* -> *)) a
 data instance Union (f :> s) a = Single (f a) | Union (Union s a)
 data instance Union Empty a = Exhausted (Union Empty a)
 
+instance Functor (Union Empty) where
+  fmap _ = exhaust
+
+instance (Functor f, Functor (Union s)) => Functor (Union (f :> s)) where
+  fmap f (Single m) = Single (fmap f m)
+  fmap f (Union u) = Union (fmap f u)
+
 -- | Perform type-safe matching.
-(@>) :: (f x -> r) -- ^ first case
+(||>) :: (f x -> r) -- ^ first case
   -> (Union s x -> r) -- ^ otherwise
   -> (Union (f :> s) x -> r) -- ^ matching function
-(@>) run _ (Single f) = run f
-(@>) _ cont (Union r) = cont r
-infixr 0 @>
+(||>) run _ (Single f) = run f
+(||>) _ cont (Union r) = cont r
+infixr 0 ||>
 
-exhaust :: Nil x -> m r
+exhaust :: Nil x -> r
 exhaust (Exhausted a) = exhaust a
+
+simply :: (f a -> r) -> ((f |> Nil) a -> r)
+simply f = f ||> exhaust
 
 data MemberInfo f s where
   Head :: MemberInfo f (f :> s)
   Tail :: (f ∈ s) => MemberInfo f (g :> s)
 
 -- | Constraint @f ∈ s@ indicates that @f@ is an element of a type-level list @s@.
-class f　∈ s where
+class f　∈ s | s -> f where
   query :: Proxy f -> Proxy s -> MemberInfo f s
 
 infix 4 ∈
