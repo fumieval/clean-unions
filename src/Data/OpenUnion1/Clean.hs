@@ -29,9 +29,6 @@ type family (f :: * -> *) |> (s :: * -> *) :: * -> *
 
 type instance f |> Union s = Union (f :> s)
 
--- | Combine two 'List's.
-type family (s :: List k) ++> (t :: List k) :: List k
-
 -- | An uninhabited union.
 type Nil = Union Empty
 
