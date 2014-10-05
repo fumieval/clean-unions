@@ -15,7 +15,8 @@
   , UndecidableInstances
   , OverlappingInstances #-}
 module Data.OpenUnion1.Clean (Union(..), Nil, List(..), (|>)(..), (||>), exhaust, simply, (∈)(), Member, liftU, (⊆)(..), Include) where
-import Data.Proxy
+
+data Proxy a = Proxy
 
 -- | Poly-kinded list
 data List a = Empty | a :> List a
@@ -27,6 +28,9 @@ infixr 5 |>
 type family (f :: * -> *) |> (s :: * -> *) :: * -> *
 
 type instance f |> Union s = Union (f :> s)
+
+-- | Combine two 'List's.
+type family (s :: List k) ++> (t :: List k) :: List k
 
 -- | An uninhabited union.
 type Nil = Union Empty

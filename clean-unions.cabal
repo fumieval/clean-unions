@@ -1,5 +1,5 @@
 name:                clean-unions
-version:             0.0.1
+version:             0.0.2
 synopsis:            Open unions without need for Typeable
 -- description:         
 homepage:            https://github.com/fumieval/clean-unions
