@@ -64,28 +64,28 @@ data MemberInfo f s where
   Tail :: MemberInfo f s -> MemberInfo f (g :> s)
 
 -- | Constraint @f ∈ s@ indicates that @f@ is an element of a type-level list @s@.
-class f　∈ s | s -> f where
+class f ∈ s | s -> f where
   query :: Proxy f -> Proxy s -> MemberInfo f s
 
 infix 4 ∈
 infix 4 ⊆
 
 instance f ∈ (f :> s) where query _ _ = Head
-instance (f　∈ s) => f　∈ (g :> s) where query p q = Tail (query p (Proxy :: Proxy s))
+instance (f ∈ s) => f ∈ (g :> s) where query p q = Tail (query p (Proxy :: Proxy s))
 
 -- | Lift some value into a union.
-liftU :: forall s f a. (f　∈ s) => f a -> Union s a
+liftU :: forall s f a. (f ∈ s) => f a -> Union s a
 liftU f = go $ query (Proxy :: Proxy f) (Proxy :: Proxy s) where
   go :: forall t. MemberInfo f t -> Union t a
   go Head = Single f
   go (Tail q) = Union (go q)
 
 -- | Type-level inclusion characterized by 'reunion'.
-class s　⊆ t where
+class s ⊆ t where
   -- | Lift a union into equivalent or larger one, permuting elements if necessary.
   reunion :: Union s a -> Union t a
 
-instance (f ∈ t, s　⊆ t) => (f :> s)　⊆ t where
+instance (f ∈ t, s ⊆ t) => (f :> s) ⊆ t where
   reunion (Single f) = liftU f
   reunion (Union s) = reunion s
 
