@@ -43,6 +43,8 @@ instance (Functor f, Functor (Union s)) => Functor (Union (f :> s)) where
   fmap f (Single m) = Single (fmap f m)
   fmap f (Union u) = Union (fmap f u)
 
+
+
 -- | Perform type-safe matching.
 (||>) :: (f x -> r) -- ^ first case
   -> (Union s x -> r) -- ^ otherwise
@@ -59,7 +61,7 @@ simply f = f ||> exhaust
 
 data MemberInfo f s where
   Head :: MemberInfo f (f :> s)
-  Tail :: (f ∈ s) => MemberInfo f (g :> s)
+  Tail :: MemberInfo f s -> MemberInfo f (g :> s)
 
 -- | Constraint @f ∈ s@ indicates that @f@ is an element of a type-level list @s@.
 class f　∈ s | s -> f where
@@ -69,13 +71,14 @@ infix 4 ∈
 infix 4 ⊆
 
 instance f ∈ (f :> s) where query _ _ = Head
-instance (f　∈ s) => f　∈ (g :> s) where query _ _ = Tail
+instance (f　∈ s) => f　∈ (g :> s) where query p q = Tail (query p (Proxy :: Proxy s))
 
 -- | Lift some value into a union.
 liftU :: forall s f a. (f　∈ s) => f a -> Union s a
-liftU f = case query (Proxy :: Proxy f) (Proxy :: Proxy s) of
-  Head -> Single f
-  Tail -> Union (liftU f)
+liftU f = go $ query (Proxy :: Proxy f) (Proxy :: Proxy s) where
+  go :: forall t. MemberInfo f t -> Union t a
+  go Head = Single f
+  go (Tail q) = Union (go q)
 
 -- | Type-level inclusion characterized by 'reunion'.
 class s　⊆ t where
