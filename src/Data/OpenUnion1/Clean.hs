@@ -18,8 +18,7 @@
 module Data.OpenUnion1.Clean (Union(..), Nil, List(..), (|>)(..), (||>), exhaust, simply, (∈)(), Member, liftU, (⊆)(..), Include) where
 
 import Control.Applicative
-import Data.Constraint
-import Data.Constraint.Unsafe
+
 data Proxy a = Proxy
 
 -- | Poly-kinded list
