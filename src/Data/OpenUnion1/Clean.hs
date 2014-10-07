@@ -15,7 +15,23 @@
   , UndecidableInstances
   , OverlappingInstances
   , EmptyDataDecls #-}
-module Data.OpenUnion1.Clean (Union(..), Nil, List(..), (|>)(..), (||>), exhaust, simply, (∈)(), Member, liftU, (⊆)(..), Include) where
+module Data.OpenUnion1.Clean (
+  -- * Basic types and classes
+  Union(..), 
+  Nil, (|>)(),
+  List(..),
+  (∈)(), Member, 
+  -- * Construction
+  liftU,
+  -- * Transformation
+  (⊆)(..), Include,
+  Pick(..),
+  hoistU,
+  -- * Destruction
+  (||>), 
+  exhaust, 
+  simply,
+  retractU) where
 
 import Control.Applicative
 
@@ -73,7 +89,7 @@ infix 4 ∈
 infix 4 ⊆
 
 instance f ∈ (f :> s) where query _ _ = Zero
-instance (f ∈ s) => f ∈ (g :> s) where query p q = Succ (query p (Proxy :: Proxy s))
+instance (f ∈ s) => f ∈ (g :> s) where query p _ = Succ (query p (Proxy :: Proxy s))
 
 -- | Lift some value into a union.
 liftU :: forall s f a. (f ∈ s) => f a -> Union s a
@@ -83,6 +99,7 @@ liftU f = go $ query (Proxy :: Proxy f) (Proxy :: Proxy s) where
   go (Succ q) = Union (go q)
 
 class Pick f s where
+  -- | Traversal for a specific element
   picked :: Applicative g => (f a -> g (f a)) -> Union s a -> g (Union s a)
 
 instance Pick f s => Pick f (f :> s) where
