@@ -84,18 +84,18 @@ liftU f = go $ query (Proxy :: Proxy f) (Proxy :: Proxy s) where
   go (Succ q) = Union (go q)
 
 class Pick f s where
-  picked_ :: Applicative g => (f a -> g (f a)) -> Union s a -> g (Union s a)
+  picked :: Applicative g => (f a -> g (f a)) -> Union s a -> g (Union s a)
 
 instance Pick f s => Pick f (f :> s) where
-  picked_ k (Single f) = Single <$> k f
-  picked_ k (Union u) = Union <$> picked_ k u
+  picked k (Single f) = Single <$> k f
+  picked k (Union u) = Union <$> picked k u
 
 instance Pick f s => Pick f (g :> s) where
-  picked_ _ u@(Single _) = pure u
-  picked_ k (Union u) = Union <$> picked_ k u
+  picked _ u@(Single _) = pure u
+  picked k (Union u) = Union <$> picked k u
 
 instance Pick f Empty where
-  picked_ _ = pure
+  picked _ = pure
 
 newtype Id a = Id { getId :: a }
 
@@ -116,22 +116,10 @@ instance Applicative (C a) where
   C (Just a) <*> C _ = C (Just a)
   C _ <*> C b = C b
 
-picked :: forall f g s a. Applicative g => (f a -> g (f a)) -> Union s a -> g (Union s a)
-picked = picked_ \\ (inst :: Forall Pick :- Pick f s)
-
-data Madoka a
-data Homura a
-
-inst :: forall p (f :: * -> *) (s :: List (* -> *)). Forall p :- p f s
-inst = trans (unsafeCoerceConstraint :: p Madoka Empty :- p f s) weaken1
-
-type Forall (p :: (* -> *) -> List (* -> *) -> Constraint) = (p Madoka Empty, p Homura (Madoka :> Empty))
-
--- retractU (liftU "hoge" :: ([] |> Maybe |> Nil) Char) :: Maybe String --> Nothing
-retractU :: Union s a -> Maybe (f a)
+retractU :: Pick f s => Union s a -> Maybe (f a)
 retractU u = getC (picked (C . Just) u)
 
-hoistU :: (f a -> f a) -> Union s a -> Union s a
+hoistU :: Pick f s => (f a -> f a) -> Union s a -> Union s a
 hoistU f u = getId (picked (Id . f) u)
 
 -- | Type-level inclusion characterized by 'reunion'.
