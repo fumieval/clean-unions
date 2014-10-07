@@ -13,16 +13,20 @@
   , FlexibleContexts
   , FunctionalDependencies
   , UndecidableInstances
-  , OverlappingInstances #-}
+  , OverlappingInstances
+  , EmptyDataDecls #-}
 module Data.OpenUnion1.Clean (Union(..), Nil, List(..), (|>)(..), (||>), exhaust, simply, (∈)(), Member, liftU, (⊆)(..), Include) where
 
+import Control.Applicative
+import Data.Constraint
+import Data.Constraint.Unsafe
 data Proxy a = Proxy
 
 -- | Poly-kinded list
 data List a = Empty | a :> List a
 
-infixr 5 :>
 infixr 5 |>
+infixr 5 :>
 
 -- | Append a new element to a union.
 type family (f :: * -> *) |> (s :: * -> *) :: * -> *
@@ -78,6 +82,57 @@ liftU f = go $ query (Proxy :: Proxy f) (Proxy :: Proxy s) where
   go :: forall t. Position f t -> Union t a
   go Zero = Single f
   go (Succ q) = Union (go q)
+
+class Pick f s where
+  picked_ :: Applicative g => (f a -> g (f a)) -> Union s a -> g (Union s a)
+
+instance Pick f s => Pick f (f :> s) where
+  picked_ k (Single f) = Single <$> k f
+  picked_ k (Union u) = Union <$> picked_ k u
+
+instance Pick f s => Pick f (g :> s) where
+  picked_ _ u@(Single _) = pure u
+  picked_ k (Union u) = Union <$> picked_ k u
+
+instance Pick f Empty where
+  picked_ _ = pure
+
+newtype Id a = Id { getId :: a }
+
+instance Functor Id where
+  fmap f (Id a) = Id (f a)
+
+instance Applicative Id where
+  pure = Id
+  Id f <*> Id a = Id (f a)
+
+newtype C a b = C { getC :: Maybe a }
+
+instance Functor (C a) where
+  fmap _ (C a) = C a
+
+instance Applicative (C a) where
+  pure _ = C Nothing
+  C (Just a) <*> C _ = C (Just a)
+  C _ <*> C b = C b
+
+picked :: forall f g s a. Applicative g => (f a -> g (f a)) -> Union s a -> g (Union s a)
+picked = picked_ \\ (inst :: Forall Pick :- Pick f s)
+
+data Madoka a
+data Homura a
+
+inst :: forall p (f :: * -> *) (s :: List (* -> *)). Forall p :- p f s
+inst = trans (unsafeCoerceConstraint :: p Madoka Empty :- p f s) weaken1
+
+type Forall (p :: (* -> *) -> List (* -> *) -> Constraint) = (p Madoka Empty, p Homura (Madoka :> Empty))
+
+-- retractU (liftU "hoge" :: ([] |> Maybe |> Nil) Char) :: Maybe String --> Nothing
+retractU :: Union s a -> Maybe (f a)
+retractU u = getC (picked (C . Just) u)
+
+hoistU :: (f a -> f a) -> Union s a -> Union s a
+hoistU f u = getId (picked (Id . f) u)
 
 -- | Type-level inclusion characterized by 'reunion'.
 class s ⊆ t where
