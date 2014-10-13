@@ -1,5 +1,5 @@
 name:                clean-unions
-version:             0.1
+version:             0.1.1
 synopsis:            Open unions without need for Typeable
 -- description:         
 homepage:            https://github.com/fumieval/clean-unions
@@ -12,6 +12,8 @@ category:            Data
 build-type:          Simple
 -- extra-source-files:  
 cabal-version:       >=1.10
+extra-source-files:
+  CHANGELOG
 
 library
   exposed-modules:     Data.OpenUnion1.Clean

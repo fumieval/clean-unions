@@ -1,0 +1,7 @@
+0.1.1
+------------------------
+* Removed `Pick` class
+
+0.1
+------------------------
+* Added `picked` traversal with `Pick` class
