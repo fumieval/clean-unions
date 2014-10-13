@@ -25,7 +25,7 @@ module Data.OpenUnion1.Clean (
   liftU,
   -- * Transformation
   (⊆)(..), Include,
-  Pick(..),
+  picked,
   hoistU,
   -- * Destruction
   (||>), 
@@ -34,8 +34,6 @@ module Data.OpenUnion1.Clean (
   retractU) where
 
 import Control.Applicative
-
-data Proxy a = Proxy
 
 -- | Poly-kinded list
 data List a = Empty | a :> List a
@@ -83,35 +81,29 @@ data Position f s where
 
 -- | Constraint @f ∈ s@ indicates that @f@ is an element of a type-level list @s@.
 class f ∈ s | s -> f where
-  query :: Proxy f -> Proxy s -> Position f s
+  position :: Position f s
 
 infix 4 ∈
 infix 4 ⊆
 
-instance f ∈ (f :> s) where query _ _ = Zero
-instance (f ∈ s) => f ∈ (g :> s) where query p _ = Succ (query p (Proxy :: Proxy s))
+instance f ∈ (f :> s) where position = Zero
+instance (f ∈ s) => f ∈ (g :> s) where position = Succ position
 
 -- | Lift some value into a union.
 liftU :: forall s f a. (f ∈ s) => f a -> Union s a
-liftU f = go $ query (Proxy :: Proxy f) (Proxy :: Proxy s) where
+liftU f = go (position :: Position f s) where
   go :: forall t. Position f t -> Union t a
   go Zero = Single f
   go (Succ q) = Union (go q)
 
-class Pick f s where
-  -- | Traversal for a specific element
-  picked :: Applicative g => (f a -> g (f a)) -> Union s a -> g (Union s a)
-
-instance Pick f s => Pick f (f :> s) where
-  picked k (Single f) = Single <$> k f
-  picked k (Union u) = Union <$> picked k u
-
-instance Pick f s => Pick f (g :> s) where
-  picked _ u@(Single _) = pure u
-  picked k (Union u) = Union <$> picked k u
-
-instance Pick f Empty where
-  picked _ = pure
+-- | Traversal for a specific element
+picked :: forall a s f g. (f ∈ s, Applicative g) => (f a -> g (f a)) -> Union s a -> g (Union s a)
+picked k = go (position :: Position f s) where
+  go :: forall t. Position f t -> Union t a -> g (Union t a)
+  go Zero (Single f) = Single <$> k f
+  go Zero u@(Union _) = pure u
+  go (Succ _) u@(Single _) = pure u
+  go (Succ q) (Union u) = Union <$> go q u
 
 newtype Id a = Id { getId :: a }
 
@@ -132,10 +124,10 @@ instance Applicative (C a) where
   C (Just a) <*> C _ = C (Just a)
   C _ <*> C b = C b
 
-retractU :: Pick f s => Union s a -> Maybe (f a)
+retractU :: (f ∈ s) => Union s a -> Maybe (f a)
 retractU u = getC (picked (C . Just) u)
 
-hoistU :: Pick f s => (f a -> f a) -> Union s a -> Union s a
+hoistU :: (f ∈ s) => (f a -> f a) -> Union s a -> Union s a
 hoistU f u = getId (picked (Id . f) u)
 
 -- | Type-level inclusion characterized by 'reunion'.
