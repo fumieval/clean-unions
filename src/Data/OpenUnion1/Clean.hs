@@ -14,7 +14,8 @@
   , FunctionalDependencies
   , UndecidableInstances
   , OverlappingInstances
-  , EmptyDataDecls #-}
+  , EmptyDataDecls
+  , StandaloneDeriving #-}
 module Data.OpenUnion1.Clean (
   -- * Basic types and classes
   Union(..), 
@@ -54,6 +55,11 @@ data family Union (s :: List (* -> *)) a
 data instance Union (f :> s) a = Single (f a) | Union (Union s a)
 data instance Union Empty a = Exhausted (Union Empty a)
 
+deriving instance (Show (f a), Show (Union s a)) => Show (Union (f :> s) a)
+
+instance Show (Union Empty a) where
+  show (Exhausted a) = show a
+
 instance Functor (Union Empty) where
   fmap _ = exhaust
 
@@ -67,7 +73,7 @@ instance (Functor f, Functor (Union s)) => Functor (Union (f :> s)) where
   -> (Union (f :> s) x -> r) -- ^ matching function
 (||>) run _ (Single f) = run f
 (||>) _ cont (Union r) = cont r
-infixr 0 ||>
+infixr 1 ||>
 
 exhaust :: Nil x -> r
 exhaust (Exhausted a) = exhaust a
